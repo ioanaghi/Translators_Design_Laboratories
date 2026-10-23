@@ -1,4 +1,10 @@
-# Translators Design — Laboratories and Project
+# Translators Design — Compilers in C/C++
+
+Flex scanners, recursive-descent parsers, ASTs, stack-machine code generation, and introductory LLVM IR.
+
+```text
+source → tokens → parser → AST → generated instructions
+```
 
 This repository collects my laboratory exercises, seminar work, and ongoing project for the **Translators Design** course taught by **Emil Chifu** at the **Technical University of Cluj-Napoca (UTCN)**.
 
