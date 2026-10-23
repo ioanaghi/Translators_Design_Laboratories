@@ -1,0 +1,18 @@
+.DS_Store
+.vscode/
+*.o
+*.dSYM/
+
+# Generated scanners and headers
+AST_TODO/lexer.c
+AST_TODO/lexer.h
+eBNF TODO/lexer.c
+eBNF TODO/lexer.h
+ProjectTD/lex.yy.c
+lab08_LLVM/lexer.cpp
+
+# Local executables
+AST_TODO/prog
+eBNF TODO/prog
+ProjectTD/SIMPLE
+lab08_LLVM/main
