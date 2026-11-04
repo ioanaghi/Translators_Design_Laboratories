@@ -6,7 +6,5 @@
 %%
 "while"   { return WHILE; }
 [0-9]+    { yylval = atoi(yytext); return INTEGER; }
-[ \t\r]+  ;
-\n        return '\n';
-.         return yytext[0];
+[()\n+]         return yytext[0];
 %%

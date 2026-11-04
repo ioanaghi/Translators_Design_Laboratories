@@ -1,26 +1,24 @@
-LLVM_CONFIG ?= $(shell command -v llvm-config-17 2>/dev/null || command -v llvm-config 2>/dev/null)
-ifeq ($(origin CXX), default)
-CXX := $(shell command -v clang++-17 2>/dev/null || command -v clang++ 2>/dev/null)
+LLVM_CONFIG ?= $(shell command -v llvm-config-17 2>/dev/null || command -v llvm-config 2>/dev/null || { for p in /opt/homebrew/opt/llvm@17/bin/llvm-config /usr/local/opt/llvm@17/bin/llvm-config; do if test -x "$$p"; then echo "$$p"; break; fi; done; })
+ifeq ($(origin CXX),default)
+CXX := clang++
 endif
-LEX := flex
 
-.PHONY: build_and_run build run clean check-deps
+.PHONY: build_and_run build run clean check-llvm
 
 build_and_run: run
 
+check-llvm:
+	@test -n "$(LLVM_CONFIG)" && "$(LLVM_CONFIG)" --version >/dev/null 2>&1 || { echo 'LLVM not found. Install with brew install llvm@17 or set LLVM_CONFIG to the actual llvm-config path.'; exit 1; }
+
 build: main
 
-check-deps:
-	@test -n "$(LLVM_CONFIG)" || { echo "LLVM development tools missing: install LLVM 17 or set LLVM_CONFIG=/path/to/llvm-config" >&2; exit 1; }
-	@command -v "$(LLVM_CONFIG)" >/dev/null || { echo "Cannot find $(LLVM_CONFIG)" >&2; exit 1; }
-
-main: main.cpp lexer.cpp | check-deps
-	$(CXX) -g -O3 $(CPPFLAGS) $(CXXFLAGS) main.cpp lexer.cpp $(shell $(LLVM_CONFIG) --cxxflags --ldflags --system-libs --libs core 2>/dev/null) $(LDFLAGS) -o $@
+main: main.cpp lexer.cpp makefile | check-llvm
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -g -O3 main.cpp lexer.cpp `"$(LLVM_CONFIG)" --cxxflags --ldflags --system-libs --libs core` $(LDFLAGS) $(LDLIBS) -o $@ -ll
 
 lexer.cpp: lexer.l
-	$(LEX) -o $@ $<
+	lex -o $@ $<
 
-run: main
+run: build
 	./main
 
 clean:

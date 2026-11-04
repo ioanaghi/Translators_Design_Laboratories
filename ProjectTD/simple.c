@@ -98,11 +98,9 @@ nodeType *C(nodeType *acc)
 
 void parser(void)
 {
-    nodeType *t;
-    t = E();
-    if (symbol != '\n' && symbol != 0)
+    ex(E());
+    if (symbol != '\n')
         error();
-    ex(t);
 }
 
 int main(void)

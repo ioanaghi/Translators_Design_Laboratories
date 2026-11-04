@@ -1,31 +1,22 @@
 # Laboratory 08: LLVM introduction
 
-The solution implements integer AST nodes, parenthesized AST printing, and LLVM
-IR generation for binary addition and subtraction. `main` constructs
-`((10 + 20) - 5)` by hand. It prints the expression to standard output and the
-verified LLVM function to standard error.
+Implemented integer AST nodes, parenthesized expression printing, and LLVM IR
+for addition and subtraction. `main.cpp` builds `((10 + 20) - 5)` by hand.
+LLVM verifies the generated function. `NoFolder` keeps arithmetic instructions visible.
 
-## Build and run
+## Run
 
-Install LLVM 17, Clang, Flex, and Make. On Ubuntu:
-
-```sh
-sudo apt install llvm-17 clang-17 flex make
-make
-```
-
-For an LLVM installation outside PATH, specify its configuration executable:
+On macOS, install LLVM 17 with `brew install llvm@17`, then run `make`.
+The makefile detects the Apple Silicon Homebrew installation automatically.
+For other installations:
 
 ```sh
-make LLVM_CONFIG=/path/to/llvm-config CXX=clang++
+make LLVM_CONFIG=/path/to/llvm-config CXX=/path/to/clang++
 ```
 
-`make build` only builds; `make run` runs the example; `make clean` removes
- generated files. The lexer is retained from the starter project and can tokenize
-numbers and addition/subtraction expressions, but the lab's manually built AST
-does not call it. There is no interactive parser or JIT execution.
+`make build` compiles, `make run` runs, and `make clean` removes generated files.
 
-## Expected output
+Expected output (expression on stdout, IR on stderr):
 
 ```text
 ((10 + 20) - 5)
@@ -37,7 +28,5 @@ entry:
 }
 ```
 
-`IRBuilder<NoFolder>` preserves the arithmetic instructions instead of folding
-them to a constant. Number nodes generate signed 32-bit integer constants.
-An invalid operator or missing operand fails code generation; each successfully
-generated function is checked with LLVM's verifier before printing.
+The lexer is retained from the starter project. The example constructs the AST
+manually; there is no interactive parser or JIT execution.
