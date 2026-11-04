@@ -1,17 +1,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
-#include <utility>
-#include <vector>
-
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/Verifier.h"
 
 using namespace std;
 using namespace llvm;
@@ -47,7 +41,7 @@ public:
     }
     void toString() override { printf("%d", Val); }
     Value* codegen() override {
-        return ConstantInt::get(*TheContext, APInt(32, Val, true));
+        return ConstantInt::get(Type::getInt32Ty(*TheContext), Val, true);
     }
 };
 
@@ -71,30 +65,21 @@ public:
         printf(")");
     }
     Value* codegen() override {
-        if (!LHS || !RHS) {
-            errs() << "Error: missing binary operand\n";
-            return nullptr;
-        }
-        Value *Left = LHS->codegen();
-        Value *Right = RHS->codegen();
-        if (!Left || !Right)
-            return nullptr;
+        Value *L = LHS->codegen();
+        Value *R = RHS->codegen();
+        if (!L || !R) return nullptr;
         switch (Op) {
-        case '+': return Builder->CreateAdd(Left, Right, "addtmp");
-        case '-': return Builder->CreateSub(Left, Right, "subtmp");
+        case '+': return Builder->CreateAdd(L, R, "addtmp");
+        case '-': return Builder->CreateSub(L, R, "subtmp");
         default:
-            errs() << "Error: unsupported operator '" << Op << "'\n";
+            errs() << "Unsupported binary operator: " << Op << '\n';
             return nullptr;
         }
     }
 };
 
-bool CodeGenTopLevel(unique_ptr<GenericASTNode> AST_Root)
+void CodeGenTopLevel(unique_ptr<GenericASTNode> AST_Root)
 {
-    if (!AST_Root) {
-        errs() << "Error: empty AST\n";
-        return false;
-    }
     // Create an anonymous function with no parameters
     vector<Type *> ArgumentsTypes(0);
     FunctionType *FT = FunctionType::get(Type::getInt32Ty(*TheContext), ArgumentsTypes, false);
@@ -105,19 +90,20 @@ bool CodeGenTopLevel(unique_ptr<GenericASTNode> AST_Root)
     Builder->SetInsertPoint(BB);
 
     // Generate the code for the body of the function and return the result
-    Value *RetVal = AST_Root->codegen();
-    if (!RetVal) {
-        Builder->ClearInsertionPoint();
+    if (Value *RetVal = AST_Root->codegen()) {
+        Builder->CreateRet(RetVal);
+    } else {
         F->eraseFromParent();
-        return false;
+        exit(EXIT_FAILURE);
     }
-    Builder->CreateRet(RetVal);
-    bool Valid = !verifyFunction(*F, &errs());
-    if (Valid)
-        F->print(errs());
-    Builder->ClearInsertionPoint();
+
+    if (verifyFunction(*F, &errs())) {
+        F->eraseFromParent();
+        exit(EXIT_FAILURE);
+    }
+
+    F->print(errs());
     F->eraseFromParent();
-    return Valid;
 }
 
 //===----------------------------------------------------------------------===//
@@ -127,14 +113,16 @@ int main()
 {
     InitializeModule();
 
-    // Build ((10 + 20) - 5). NoFolder keeps both instructions visible.
-    unique_ptr<GenericASTNode> astRoot = make_unique<BinaryExprAST>(
-        '-',
-        make_unique<BinaryExprAST>(
-            '+', make_unique<NumberASTNode>(10), make_unique<NumberASTNode>(20)),
+    // Create an AST by hand and generate the code from it
+    auto astRoot = make_unique<BinaryExprAST>('-',
+        make_unique<BinaryExprAST>('+',
+            make_unique<NumberASTNode>(10),
+            make_unique<NumberASTNode>(20)),
         make_unique<NumberASTNode>(5));
     astRoot->toString();
     printf("\n");
     fflush(stdout);
-    return CodeGenTopLevel(move(astRoot)) ? EXIT_SUCCESS : EXIT_FAILURE;
+    CodeGenTopLevel(std::move(astRoot));
+
+    return 0;
 }
